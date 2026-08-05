@@ -63,7 +63,6 @@ jobs:
       - name: Integration tests (real middleware, Docker)
         run: pytest -m integration -q tests/integration
 
-
   codegraph:
     runs-on: ubuntu-latest
     steps:
@@ -77,4 +76,7 @@ jobs:
         run: npm install -g codegraph
 
       - name: Build index (smoke check)
-        run: codegraph index
+        run: |
+          export PATH="$(npm prefix -g)/bin:$PATH"
+          codegraph --version
+          codegraph index
