@@ -18,11 +18,13 @@ jobs:
 
       - name: Install project packages
         run: |
-          pip install --no-cache-dir -e packages/contract-sdk
+          # 运行时依赖（内核以 --no-deps 安装，需显式装全）
+          pip install --no-cache-dir -r requirements-prod.txt
+          pip install --no-cache-dir --no-deps -e packages/contract-sdk
           pip install --no-cache-dir --no-deps -e packages/kernel
           pip install --no-cache-dir --no-deps -e services/service-template
           pip install --no-cache-dir --no-deps -e services/gateway
-          pip install --no-cache-dir pytest pytest-asyncio pytest-cov ruff jsonschema aiosqlite alembic "uvicorn[standard]"
+          pip install --no-cache-dir pytest pytest-asyncio pytest-cov ruff jsonschema aiosqlite
 
       - name: Lint (ruff)
         run: ruff check packages services
@@ -51,11 +53,12 @@ jobs:
 
       - name: Install project packages
         run: |
-          pip install --no-cache-dir -e packages/contract-sdk
+          pip install --no-cache-dir -r requirements-prod.txt
+          pip install --no-cache-dir --no-deps -e packages/contract-sdk
           pip install --no-cache-dir --no-deps -e packages/kernel
           pip install --no-cache-dir --no-deps -e services/service-template
           pip install --no-cache-dir --no-deps -e services/gateway
-          pip install --no-cache-dir pytest pytest-asyncio pytest-cov ruff jsonschema aiosqlite alembic testcontainers[postgres,redis,rabbitmq] "uvicorn[standard]"
+          pip install --no-cache-dir pytest pytest-asyncio pytest-cov ruff jsonschema aiosqlite testcontainers[postgres,redis,rabbitmq]
 
       - name: Integration tests (real middleware, Docker)
         run: pytest -m integration -q tests/integration
