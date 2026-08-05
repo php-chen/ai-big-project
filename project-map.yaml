@@ -26,7 +26,7 @@ project:
     dev_tools:
   codegraph:
     path: .codegraph          # 代码级导航索引（本地生成，不入库）
-    cli: codegraph            # npm 全局安装
+    cli: codegraph            # 二进制名（npm 包: @colbymchenry/codegraph）
     mcp: codegraph serve --mcp # 已注册到 Codex（重启生效）
 
 deployment: Docker Compose + GitHub Actions CD
@@ -113,7 +113,7 @@ events:
 dev_tools:
   codegraph:
     path: .codegraph          # 代码级导航索引（本地生成，不入库）
-    cli: codegraph            # npm 全局安装
+    cli: codegraph            # 二进制名（npm 包: @colbymchenry/codegraph）
     mcp: codegraph serve --mcp # 已注册到 Codex（重启生效）
 
 deployment:

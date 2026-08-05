@@ -17,7 +17,7 @@ $Root = Split-Path -Parent $PSScriptRoot
 Set-Location $Root
 
 if (-not (Get-Command codegraph -ErrorAction SilentlyContinue)) {
-    Write-Host "[codegraph] 未安装，请先: npm install -g codegraph"
+    Write-Host "[codegraph] 未安装，请先: npm install -g @colbymchenry/codegraph"
     exit 1
 }
 

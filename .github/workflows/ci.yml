@@ -73,7 +73,7 @@ jobs:
           node-version: "20"
 
       - name: Install codegraph CLI
-        run: npm install -g codegraph
+        run: npm install -g @colbymchenry/codegraph
 
       - name: Build index (smoke check)
         run: |
