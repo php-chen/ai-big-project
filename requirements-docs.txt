@@ -1,2 +1,2 @@
-# 文档站依赖（mkdocs-material 会自动拉取 mkdocs）
-mkdocs-material>=9.5
+# 文档站依赖（锁 9.x 稳定线；MkDocs 2.0 将破坏兼容，勿升级到 <10 之外）
+mkdocs-material>=9.5,<10

@@ -168,3 +168,10 @@ erDiagram
   ```
 - **MCP**：已注册到 Codex（`codegraph serve --mcp`），重启 agent 后自动获得 `codegraph_explore` / `codegraph_node` 工具；
 - **CI**：`codegraph` 作业验证索引可在仓库上正常构建（防工具与代码失配）。
+
+## 文档站维护（防 MkDocs 2.0 断裂）
+
+- **版本锁定**：`requirements-docs.txt` 锁定 `mkdocs-material>=9.5,<10`（MkDocs 2.0 将破坏兼容：插件系统移除、主题重写、无迁移路径、闭源）——**不要**升级到 10.x/2.0；
+- **可迁移约束**：文档一律保持**纯 Markdown + Mermaid + 表格 + admonition**，避免主题专属语法（如仅 material 支持的 shortcodes），以便将来低成本迁移到 VitePress / mdBook / Astro Starlight；
+- **构建**：`scripts\docs.ps1 -Build`（strict 模式）在 CI 前本地先过；
+- 若未来必须换生成器：先迁移 `docs/index.md`（项目地图）+ `docs/standards/*`（规范），再迁移 `architecture/` 与 `module-specs/`。
