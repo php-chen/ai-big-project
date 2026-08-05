@@ -89,8 +89,6 @@ def test_gateway_has_no_database_access(repo_root):
         (str(p.relative_to(repo_root)), mod)
         for p in gw.rglob("*.py")
         for mod in _imports(p)
-        if mod.split(".")[0] == "sqlalchemy"
-        or mod.startswith("kernel.db")
-        or mod.startswith("kernel.outbox")
+        if mod.startswith(("sqlalchemy", "kernel.db", "kernel.outbox"))
     ]
     assert not violations, f"网关禁止访问数据库：{violations}"

@@ -72,3 +72,11 @@ async def test_event_envelope_forbids_extra_fields():
             payload={},
             invented_field="x",  # type: ignore[call-arg]
         )
+
+
+async def test_build_event_bus_chooses_by_amqp():
+    """定律4：配置 AMQP_URL 用 RabbitMQ（生产），否则本地总线（开发/测试）。"""
+    from kernel.events import LocalEventBus, RabbitEventBus, build_event_bus
+
+    assert isinstance(build_event_bus(None), LocalEventBus)
+    assert isinstance(build_event_bus("amqp://guest:guest@localhost:5672/"), RabbitEventBus)

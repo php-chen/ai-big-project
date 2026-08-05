@@ -6,7 +6,6 @@
 from __future__ import annotations
 
 import yaml
-
 from app.config import ServiceSettings
 from app.main import create_app
 

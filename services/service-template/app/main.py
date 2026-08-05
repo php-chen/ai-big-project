@@ -12,7 +12,7 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from kernel.app import create_app as kernel_create_app
 from kernel.db import build_database_router, enable_slow_query_logging, init_db
-from kernel.events import LocalEventBus
+from kernel.events import build_event_bus
 from kernel.idempotency import InMemoryIdempotencyStore, build_idempotency_store
 from kernel.outbox import OutboxRelay
 from kernel.registry import build_registry, run_heartbeat
@@ -82,7 +82,8 @@ def create_app(
         for engine in db.read_engines:
             enable_slow_query_logging(engine, settings.log_slow_query_ms, "read")
 
-    bus = LocalEventBus()
+    # 定律4：事件总线——配置 AMQP_URL 用 RabbitMQ（生产），否则本地总线（开发/测试）
+    bus = build_event_bus(settings.amqp_url)
 
     if idempotency_store is None:
         idempotency_store = (

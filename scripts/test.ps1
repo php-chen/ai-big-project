@@ -23,12 +23,10 @@ function Run-Pytest([string]$Name, [string[]]$ArgsList) {
     Pop-Location
 }
 
-$UnitDirs = @(
-    "packages\contract-sdk",
-    "packages\kernel",
-    "services\service-template",
-    "services\gateway"
-)
+# 自动发现所有包与服务（新增模块无需改本脚本）
+$UnitDirs = @("packages\contract-sdk", "packages\kernel")
+$UnitDirs += Get-ChildItem (Join-Path $Root "services") -Directory | ForEach-Object { "services\$($_.Name)" }
+$UnitDirs += Get-ChildItem (Join-Path $Root "packages") -Directory | Where-Object { $_.Name -ne "contract-sdk" -and $_.Name -ne "kernel" } | ForEach-Object { "packages\$($_.Name)" }
 
 switch ($Level) {
     "unit" {

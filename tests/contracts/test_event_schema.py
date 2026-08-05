@@ -10,11 +10,11 @@ from datetime import datetime, timezone
 from pathlib import Path
 
 import pytest
+from contract_sdk.schemas.user import UserCreatedPayload
 from httpx import ASGITransport, AsyncClient
 from jsonschema import Draft202012Validator
 from sqlalchemy import select
 
-from contract_sdk.schemas.user import UserCreatedPayload
 from tests.conftest import REPO_ROOT
 
 # 事件契约文件 -> 合法样例 payload 构造器（新增事件时在此登记）

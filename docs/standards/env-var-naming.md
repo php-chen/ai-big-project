@@ -23,6 +23,12 @@
 | TRUST_PROXY_HEADERS | 生产 ✅ | 信任网关注入身份头（须配 mTLS） |
 | OTEL_EXPORTER_OTLP_ENDPOINT | 生产 ✅ | OTLP Collector 地址 |
 | IDEMPOTENCY_TTL_SECONDS | 否 | 默认 3600 |
+| REPLICA_DATABASE_URL | 按服务 | 从库连接串（读写分离） |
+| REPLICA_DATABASE_URLS | 否 | 逗号分隔多个读副本（优先于 REPLICA_DATABASE_URL） |
+| REGISTRY_URL | 按服务 | 服务注册中心（Redis，动态扩容/发现） |
+| INSTANCE_URL | 否 | 本实例对外地址（注册用） |
+| DISCOVERY_SERVICE | 网关 | 网关要动态发现的服务名 |
+| UPSTREAM_SERVICE_URLS | 网关 | 逗号分隔多个上游（负载均衡） |
 
 ## 配置读取
 

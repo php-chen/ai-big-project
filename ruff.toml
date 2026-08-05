@@ -1,0 +1,6 @@
+# 仓库级统一 ruff 配置（门禁：packages + services + tests）
+line-length = 100
+
+[lint.per-file-ignores]
+# 测试代码允许宽泛捕获与静默轮询（健康探测、进程清理、Depends 惯用法）
+"tests/**" = ["BLE001", "S110"]

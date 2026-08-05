@@ -14,6 +14,12 @@
 - 可观测性：OpenTelemetry（W3C `traceparent`）
 - 环境变量命名：全小写下划线，连接串统一 `<类型>_URL`（见 `.env.example`）
 - **任何服务连接中间件，都只从环境变量读取，禁止硬编码连接信息**
+- 指标：Prometheus `/metrics`（请求量/错误率/延迟/Outbox 积压），资源监控见 `deploy/monitoring/`
+- 服务注册/发现：Redis 注册中心（动态扩容，网关动态感知副本）
+- 自动扩缩：`services/autoscaler`（RPS/错误率策略 + `docker compose --scale`，见 dynamic-scaling.md）
+- 项目地图：`project-map.yaml`（机器可读单一事实来源，CI 校验防漂移）
+- 代码导航：CodeGraph（`.codegraph/` 索引，`scripts\codegraph.ps1`；MCP 已接入 Codex）
+- 文档站：mkdocs-material（`scripts\docs.ps1`，锁定 9.x 稳定线）
 
 ---
 

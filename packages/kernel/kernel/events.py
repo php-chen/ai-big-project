@@ -84,6 +84,15 @@ class RabbitEventBus:
             await self._connection.close()
 
 
+def build_event_bus(amqp_url: str | None) -> EventPublisher:
+    """按配置构建事件总线（定律4 真实落地）：
+    配置 AMQP_URL -> RabbitMQ（生产，跨服务）；否则进程内 LocalEventBus（开发/测试）。
+    """
+    if amqp_url:
+        return RabbitEventBus(amqp_url)
+    logger.warning("未配置 AMQP_URL，使用进程内 LocalEventBus（仅限开发/测试；生产必须 RabbitMQ）")
+    return LocalEventBus()
+
 def envelope_trace_from_context() -> TraceContext | None:
     """从当前 contextvars 构造事件 trace（Outbox 落库时记录，relay 投递时透传）。"""
     trace_id = get_trace_id()

@@ -27,7 +27,7 @@ jobs:
           pip install --no-cache-dir pytest pytest-asyncio pytest-cov ruff jsonschema aiosqlite
 
       - name: Lint (ruff)
-        run: ruff check packages services
+        run: ruff check packages services tests
 
       - name: Unit + boundary + contract tests
         run: |

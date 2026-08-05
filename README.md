@@ -5,17 +5,16 @@
 ## 项目地图`n`n> 给开发者 / 产品 / AI / 测试的全局导航：**机器可读** `project-map.yaml`（CI 校验防漂移）+ **人读全景** [docs/index.md](docs/index.md)（Mermaid 架构/链路/事件/数据 ER）+ 可搜索文档站（`scripts\docs.ps1`）。`n`n- **5 分钟看懂项目**：见 [docs/index.md](docs/index.md)`n- **新增/修改模块必须同步更新** `project-map.yaml`（CI 校验，不一致 = 失败）`n`n---`n`n## 快速开始
 
 ```powershell
-# 1. 创建虚拟环境（Python 3.14）
-py -3.14 -m venv .venv
+# 一键初始化（创建虚拟环境 + 可编辑安装所有本地包/服务 + 测试依赖）
+scripts\setup.ps1
 
-# 2. 安装依赖（含可编辑安装 kernel / contract-sdk / 服务）
-.\.venv\Scripts\python.exe -m pip install -r requirements.txt
-
-# 3. 启动中间件（PostgreSQL / Redis / RabbitMQ）
+# 启动中间件（PostgreSQL 主从 / Redis / RabbitMQ）
 docker compose up -d
 
-# 4. 复制环境变量模板
+# 复制环境变量模板
 Copy-Item .env.example .env
+
+> 说明：`requirements.txt` 为第三方依赖锁定；本地包（kernel / contract-sdk / 各服务）由 `setup.ps1` 可编辑安装。
 ```
 
 ## 一键脚本

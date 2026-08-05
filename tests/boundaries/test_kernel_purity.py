@@ -44,3 +44,15 @@ def test_kernel_supports_contract_sdk_dependency(repo_root):
         for mod in _module_names(p)
     )
     assert uses_contracts, "内核应通过 contract_sdk 使用事件信封（EventEnvelope）"
+
+
+def test_contract_sdk_never_imports_kernel_or_services(repo_root):
+    """契约层纯净：contract-sdk 禁止依赖内核与服务包（洋葱边界：契约是基础，不反向依赖）。"""
+    sdk_dir = repo_root / "packages" / "contract-sdk" / "contract_sdk"
+    violations = [
+        (str(p.relative_to(repo_root)), mod)
+        for p in sdk_dir.rglob("*.py")
+        for mod in _module_names(p)
+        if mod.split(".")[0] in FORBIDDEN_TOP or mod.split(".")[0] == "kernel"
+    ]
+    assert not violations, f"契约 SDK 禁止依赖内核/服务包：{violations}"

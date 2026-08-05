@@ -10,11 +10,11 @@ if (-not (Test-Path ".venv")) {
 
 $Py = Join-Path $Root ".venv\Scripts\python.exe"
 
-Write-Host "[setup] 安装可编辑包 ..."
+Write-Host "[setup] 安装可编辑包（自动发现 packages/ 与 services/）..."
 & $Py -m pip install --no-input -e packages/contract-sdk
 & $Py -m pip install --no-input --no-deps -e packages/kernel
-& $Py -m pip install --no-input --no-deps -e services/service-template
-& $Py -m pip install --no-input --no-deps -e services/gateway
+Get-ChildItem (Join-Path $Root "packages") -Directory | Where-Object { $_.Name -ne "contract-sdk" -and $_.Name -ne "kernel" } | ForEach-Object { & $Py -m pip install --no-input --no-deps -e "packages\$($_.Name)" }
+Get-ChildItem (Join-Path $Root "services") -Directory | ForEach-Object { & $Py -m pip install --no-input --no-deps -e "services\$($_.Name)" }
 
 Write-Host "[setup] 安装开发依赖 ..."
 & $Py -m pip install --no-input pytest pytest-asyncio ruff aiosqlite alembic

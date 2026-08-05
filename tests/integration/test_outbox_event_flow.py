@@ -15,7 +15,6 @@ from pathlib import Path
 
 import pytest
 from jsonschema import Draft202012Validator
-
 from kernel.db import DatabaseRouter, build_engine, init_db
 from kernel.errors import ConflictError
 from kernel.events import EventConsumer, RabbitEventBus
@@ -81,7 +80,7 @@ async def test_outbox_rabbit_full_flow(middleware):
     """创建用户 -> outbox 落库 -> relay 投递 RabbitMQ -> 消费端收到且符合契约。"""
     from app.domain.user_service import UserService
 
-    engine, db = _make_router(middleware)
+    _engine, db = _make_router(middleware)
     await init_db(db.write_engine)
 
     bus = RabbitEventBus(middleware["amqp_url"])
@@ -121,7 +120,7 @@ async def test_outbox_rabbit_full_flow(middleware):
 async def test_duplicate_email_conflict_on_real_db(middleware):
     from app.domain.user_service import UserService
 
-    engine, db = _make_router(middleware)
+    _engine, db = _make_router(middleware)
     await init_db(db.write_engine)
     try:
         service = UserService(db)
