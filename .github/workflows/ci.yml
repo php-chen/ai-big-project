@@ -79,4 +79,4 @@ jobs:
         run: |
           export PATH="$(npm prefix -g)/bin:$PATH"
           codegraph --version
-          codegraph index
+          if [ -d .codegraph ]; then codegraph sync; else codegraph init; fi
