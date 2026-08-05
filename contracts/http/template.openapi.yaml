@@ -1,0 +1,112 @@
+openapi: 3.1.0
+info:
+  title: Template Service API
+  version: 0.1.0
+  description: 服务模板契约示例（契约优先）。本服务为“用户服务”原型，拥有 users 表。
+servers:
+  - url: http://localhost:8100
+paths:
+  /v1/users:
+    post:
+      operationId: createUser
+      summary: 创建用户
+      parameters:
+        - name: Idempotency-Key
+          in: header
+          required: true
+          schema:
+            type: string
+            format: uuid
+          description: 幂等键（定律4：副作用接口必须幂等）
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UserCreate"
+      responses:
+        "201":
+          description: 创建成功
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/User"
+        "409":
+          $ref: "#/components/responses/Problem"
+        "422":
+          $ref: "#/components/responses/Problem"
+  /v1/users/{user_id}:
+    get:
+      operationId: getUser
+      summary: 查询用户（数据级权限：仅本人或管理员）
+      parameters:
+        - name: user_id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "200":
+          description: 成功
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/User"
+        "404":
+          $ref: "#/components/responses/Problem"
+components:
+  schemas:
+    User:
+      type: object
+      additionalProperties: false
+      required: [id, email, display_name, status, created_at]
+      properties:
+        id:
+          type: string
+          format: uuid
+        email:
+          type: string
+          format: email
+        display_name:
+          type: string
+          maxLength: 64
+        status:
+          type: string
+          enum: [active, disabled]
+        created_at:
+          type: string
+          format: date-time
+        # 演进规则示例：新增字段必须带默认值且为可选
+        vip_level:
+          type: integer
+          default: 0
+    UserCreate:
+      type: object
+      additionalProperties: false
+      required: [email, display_name]
+      properties:
+        email:
+          type: string
+          format: email
+        display_name:
+          type: string
+          maxLength: 64
+        vip_level:
+          type: integer
+          default: 0
+  responses:
+    Problem:
+      description: RFC 9457 Problem Details 错误响应
+      content:
+        application/problem+json:
+          schema:
+            type: object
+            properties:
+              type: { type: string }
+              title: { type: string }
+              status: { type: integer }
+              detail: { type: string }
+              code: { type: string }
+              instance: { type: string }
+              trace_id: { type: string }

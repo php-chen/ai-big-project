@@ -1,0 +1,59 @@
+name: Deploy
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+    environment: production
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build & push service-template
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: services/service-template/Dockerfile
+          push: true
+          tags: |
+            ghcr.io/${{ github.repository }}/service-template:${{ github.sha }}
+            ghcr.io/${{ github.repository }}/service-template:latest
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Build & push gateway
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: services/gateway/Dockerfile
+          push: true
+          tags: |
+            ghcr.io/${{ github.repository }}/gateway:${{ github.sha }}
+            ghcr.io/${{ github.repository }}/gateway:latest
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Deploy via SSH
+        uses: appleboy/ssh-action@v1
+        with:
+          host: ${{ secrets.DEPLOY_HOST }}
+          username: ${{ secrets.DEPLOY_USER }}
+          key: ${{ secrets.DEPLOY_KEY }}
+          script: |
+            cd /root/ai-big/deploy
+            export TAG=${{ github.sha }}
+            export REGISTRY=ghcr.io/${{ github.repository }}
+            ./deploy-single.sh

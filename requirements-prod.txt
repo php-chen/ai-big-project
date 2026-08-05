@@ -1,0 +1,14 @@
+# 生产运行时依赖（Docker 镜像构建用；版本下限与 pyproject 保持一致）
+fastapi>=0.115
+uvicorn[standard]>=0.30
+pydantic>=2.9
+pydantic-settings>=2.5
+sqlalchemy[asyncio]>=2.0
+psycopg[binary]>=3.2
+redis>=5
+aio-pika>=9
+opentelemetry-api>=1.27
+opentelemetry-sdk>=1.27
+prometheus-client>=0.20
+httpx>=0.27
+alembic>=1.13

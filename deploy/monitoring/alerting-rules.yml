@@ -1,0 +1,73 @@
+# 资源与可用性告警规则
+groups:
+  - name: availability
+    rules:
+      - alert: ServiceDown
+        expr: up == 0
+        for: 2m
+        labels:
+          severity: critical
+        annotations:
+          summary: "{{ $labels.job }} 实例 {{ $labels.instance }} 不可达"
+
+  - name: resources
+    rules:
+      - alert: HighHostCPU
+        expr: 100 - (avg by(instance) (rate(node_cpu_seconds_total{mode="idle"}[5m])) * 100) > 85
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "宿主机 CPU 使用率超 85%: {{ $labels.instance }}"
+
+      - alert: HighHostMemory
+        expr: (1 - (node_memory_MemAvailable_bytes / node_memory_MemTotal_bytes)) * 100 > 85
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "宿主机内存使用率超 85%: {{ $labels.instance }}"
+
+      - alert: HighContainerCPU
+        expr: rate(container_cpu_usage_seconds_total{name!=""}[5m]) > 0.8
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "容器 CPU 超 80%: {{ $labels.name }}"
+
+      - alert: HighContainerMemory
+        expr: (container_memory_working_set_bytes{name!=""} / container_spec_memory_limit_bytes{name!=""}) > 0.85
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "容器内存超 85%: {{ $labels.name }}"
+
+  - name: application
+    rules:
+      - alert: HighErrorRate
+        expr: |
+          sum by(job) (rate(http_requests_total{status=~"5.."}[5m]))
+          / clamp_min(sum by(job) (rate(http_requests_total[5m])), 0.001) > 0.05
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "5xx 错误率超 5%: {{ $labels.job }}"
+
+      - alert: OutboxBacklogHigh
+        expr: outbox_pending_total > 100
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Outbox 积压超 100: {{ $labels.service }}"
+
+      - alert: TooManyInflight
+        expr: http_requests_in_flight > 200
+        for: 2m
+        labels:
+          severity: warning
+        annotations:
+          summary: "在途请求过多（>200）: {{ $labels.service }}"

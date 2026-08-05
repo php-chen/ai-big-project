@@ -1,0 +1,40 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.eggs/
+build/
+dist/
+.pytest_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+
+# Virtual env
+.venv/
+
+# Env
+.env
+*.env.local
+
+# IDE
+.idea/
+.vscode/
+*.swp
+
+# Logs
+*.log
+
+# OS
+Thumbs.db
+.DS_Store
+
+# 本地数据
+data/
+
+# 遗留/临时
+legacy_app/
+smoke-logs/
+# 部署
+deploy/.env.prod
+.env.prod

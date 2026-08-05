@@ -1,0 +1,26 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "service-autoscaler"
+version = "0.1.0"
+description = "动态扩缩器：拉取服务指标 -> 策略判定 -> 执行 docker compose --scale"
+requires-python = ">=3.12"
+dependencies = [
+  "ai-kernel>=0.1.0",
+  "ai-contract-sdk>=0.1.0",
+]
+
+[project.optional-dependencies]
+dev = ["pytest>=8", "pytest-asyncio>=0.24", "ruff>=0.6"]
+
+[tool.setuptools.packages.find]
+include = ["autoscaler*"]
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+testpaths = ["tests"]
+
+[tool.ruff]
+line-length = 100

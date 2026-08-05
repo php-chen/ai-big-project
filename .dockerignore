@@ -1,0 +1,20 @@
+# 构建上下文瘦身：镜像只需要 packages/、services/ 与依赖清单
+.git
+.venv
+**/__pycache__
+**/*.egg-info
+.pytest_cache
+.ruff_cache
+.coverage
+htmlcov
+*.log
+legacy_app
+smoke-logs
+tests
+docs
+contracts
+deploy
+scripts
+data
+.env
+.env.*

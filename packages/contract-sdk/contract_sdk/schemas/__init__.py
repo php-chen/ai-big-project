@@ -1,0 +1,1 @@
+"""各域线上 schema（由 contracts/ 生成）。"""

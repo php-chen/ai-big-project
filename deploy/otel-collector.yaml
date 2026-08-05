@@ -1,0 +1,24 @@
+# OTel Collector 配置（定律5：统一接入点）
+# 生产接入后端（Jaeger/Tempo）时，把 exporter 换成 otlp/jaeger/tempo 并配置 endpoint
+receivers:
+  otlp:
+    protocols:
+      grpc:
+        endpoint: 0.0.0.0:4317
+      http:
+        endpoint: 0.0.0.0:4318
+
+processors:
+  batch:
+    timeout: 1s
+
+exporters:
+  logging:
+    verbosity: basic
+
+service:
+  pipelines:
+    traces:
+      receivers: [otlp]
+      processors: [batch]
+      exporters: [logging]

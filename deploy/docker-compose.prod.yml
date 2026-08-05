@@ -1,0 +1,332 @@
+# 生产编排（在 deploy/ 目录执行）
+# 用法：
+#   cp .env.prod.example .env.prod   # 填写真实值
+#   docker compose -f docker-compose.prod.yml --env-file .env.prod up -d
+#   可观测性（OTel Collector）按需追加：--profile observability
+name: ai-big-project
+
+x-template-env: &template-env
+  APP_ENV: production
+  SERVICE_NAME: service-template
+  LOG_LEVEL: ${LOG_LEVEL:-INFO}
+  DATABASE_URL: postgresql+psycopg://${POSTGRES_USER:-app}:${POSTGRES_PASSWORD:-app}@postgres:5432/${POSTGRES_DB:-app}
+  REPLICA_DATABASE_URL: postgresql+psycopg://${POSTGRES_USER:-app}:${POSTGRES_PASSWORD:-app}@postgres-replica:5432/${POSTGRES_DB:-app}
+  REPLICA_DATABASE_URLS: ""
+  REDIS_URL: redis://redis:6379/0
+  AMQP_URL: amqp://${RABBITMQ_USER:-guest}:${RABBITMQ_PASS:-guest}@rabbitmq:5672/
+  TRUST_PROXY_HEADERS: "true"
+  OTEL_EXPORTER_OTLP_ENDPOINT: http://otel-collector:4318
+  OTEL_SERVICE_NAME: service-template
+  # 动态扩容：注册中心 + 本实例地址（新 --scale 副本继承同一地址，DNS 覆盖）
+  REGISTRY_URL: redis://redis:6379/1
+  INSTANCE_URL: http://service-template:8100
+
+services:
+  postgres:            # 主库（写）：开启流复制
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-app}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-app}
+      POSTGRES_DB: ${POSTGRES_DB:-app}
+    command:
+      - postgres
+      - -c
+      - wal_level=replica
+      - -c
+      - max_wal_senders=10
+      - -c
+      - max_replication_slots=10
+      - -c
+      - hot_standby=on
+      - -c
+      - hba_file=/config/pg_hba.conf
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+      - ./postgres/init-repl.sql:/docker-entrypoint-initdb.d/10-init-repl.sql:ro
+      - ./postgres/pg_hba.conf:/config/pg_hba.conf:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-app} -d ${POSTGRES_DB:-app}"]
+      interval: 5s
+      timeout: 3s
+      retries: 12
+    networks: [backend]
+    restart: unless-stopped
+
+  postgres-replica:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-app}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-app}
+      PGPASSWORD: ${POSTGRES_REPLICATION_PASSWORD:-replpass}
+    entrypoint: ["/bin/sh", "/usr/local/bin/replica-entrypoint.sh"]
+    volumes:
+      - pgreplica:/var/lib/postgresql/data
+      - ./postgres/replica-entrypoint.sh:/usr/local/bin/replica-entrypoint.sh:ro
+    depends_on:
+      postgres:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-app} -d ${POSTGRES_DB:-app}"]
+      interval: 5s
+      timeout: 3s
+      retries: 12
+    networks: [backend]
+    restart: unless-stopped
+
+  redis:
+    image: redis:7-alpine
+    command: ["redis-server", "--appendonly", "yes"]
+    volumes:
+      - redisdata:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 12
+    networks: [backend]
+    restart: unless-stopped
+
+  rabbitmq:
+    image: rabbitmq:3-management-alpine
+    environment:
+      RABBITMQ_DEFAULT_USER: ${RABBITMQ_USER:-guest}
+      RABBITMQ_DEFAULT_PASS: ${RABBITMQ_PASS:-guest}
+    volumes:
+      - mqdata:/var/lib/rabbitmq
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "-q", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+    networks: [backend]
+    restart: unless-stopped
+
+  otel-collector:
+    image: otel/opentelemetry-collector-contrib:0.119.0
+    command: ["--config=/etc/otel/config.yaml"]
+    volumes:
+      - ./otel-collector.yaml:/etc/otel/config.yaml:ro
+    ports:
+      - "${OTEL_GRPC_PORT:-4317}:4317"
+      - "${OTEL_HTTP_PORT:-4318}:4318"
+    profiles: ["observability"]
+    networks: [backend]
+    restart: unless-stopped
+
+  migrate:
+    image: ${REGISTRY:-ghcr.io/yourorg}/service-template:${TAG:-latest}
+    environment: *template-env
+    command: ["alembic", "upgrade", "head"]
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks: [backend]
+    restart: "no"
+
+  service-template: &service-template
+    image: ${REGISTRY:-ghcr.io/yourorg}/service-template:${TAG:-latest}
+    environment: *template-env
+    # 被自动扩缩的服务不暴露宿主端口（内部网络访问，--scale 无端口冲突）
+    ports: []
+    depends_on:
+      postgres:
+        condition: service_healthy
+      postgres-replica:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+      migrate:
+        condition: service_completed_successfully
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request;urllib.request.urlopen('http://127.0.0.1:8100/health/ready',timeout=3)"]
+      interval: 15s
+      timeout: 5s
+      start_period: 20s
+      retries: 5
+    networks: [backend]
+    restart: unless-stopped
+
+  service-template-2:
+    <<: *service-template
+    environment:
+      APP_ENV: production
+      SERVICE_NAME: service-template
+      LOG_LEVEL: ${LOG_LEVEL:-INFO}
+      DATABASE_URL: postgresql+psycopg://${POSTGRES_USER:-app}:${POSTGRES_PASSWORD:-app}@postgres:5432/${POSTGRES_DB:-app}
+      REPLICA_DATABASE_URL: postgresql+psycopg://${POSTGRES_USER:-app}:${POSTGRES_PASSWORD:-app}@postgres-replica:5432/${POSTGRES_DB:-app}
+      REDIS_URL: redis://redis:6379/0
+      AMQP_URL: amqp://${RABBITMQ_USER:-guest}:${RABBITMQ_PASS:-guest}@rabbitmq:5672/
+      TRUST_PROXY_HEADERS: "true"
+      OTEL_EXPORTER_OTLP_ENDPOINT: http://otel-collector:4318
+      OTEL_SERVICE_NAME: service-template
+      REGISTRY_URL: redis://redis:6379/1
+      INSTANCE_URL: http://service-template-2:8100
+    ports: []
+
+  service-template-3:
+    <<: *service-template
+    environment:
+      APP_ENV: production
+      SERVICE_NAME: service-template
+      LOG_LEVEL: ${LOG_LEVEL:-INFO}
+      DATABASE_URL: postgresql+psycopg://${POSTGRES_USER:-app}:${POSTGRES_PASSWORD:-app}@postgres:5432/${POSTGRES_DB:-app}
+      REPLICA_DATABASE_URL: postgresql+psycopg://${POSTGRES_USER:-app}:${POSTGRES_PASSWORD:-app}@postgres-replica:5432/${POSTGRES_DB:-app}
+      REDIS_URL: redis://redis:6379/0
+      AMQP_URL: amqp://${RABBITMQ_USER:-guest}:${RABBITMQ_PASS:-guest}@rabbitmq:5672/
+      TRUST_PROXY_HEADERS: "true"
+      OTEL_EXPORTER_OTLP_ENDPOINT: http://otel-collector:4318
+      OTEL_SERVICE_NAME: service-template
+      REGISTRY_URL: redis://redis:6379/1
+      INSTANCE_URL: http://service-template-3:8100
+    ports: []
+
+  gateway: &gateway
+    image: ${REGISTRY:-ghcr.io/yourorg}/gateway:${TAG:-latest}
+    environment:
+      APP_ENV: production
+      SERVICE_NAME: gateway
+      LOG_LEVEL: ${LOG_LEVEL:-INFO}
+      UPSTREAM_SERVICE_URLS: http://service-template:8100,http://service-template-2:8100,http://service-template-3:8100
+      DEV_TOKEN: ${DEV_TOKEN:-dev-token}
+      OTEL_EXPORTER_OTLP_ENDPOINT: http://otel-collector:4318
+      OTEL_SERVICE_NAME: gateway
+      # 动态发现：从注册中心刷新服务副本（扩缩容自动被感知）
+      REGISTRY_URL: redis://redis:6379/1
+      DISCOVERY_SERVICE: service-template
+    ports:
+      - "${GATEWAY_PORT:-8000}:8000"
+    depends_on:
+      service-template:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request;urllib.request.urlopen('http://127.0.0.1:8000/health/live',timeout=3)"]
+      interval: 15s
+      timeout: 5s
+      start_period: 20s
+      retries: 5
+    networks: [backend]
+    restart: unless-stopped
+
+  gateway-2:
+    <<: *gateway
+    ports: []
+  gateway-3:
+    <<: *gateway
+    ports: []
+
+  # 动态扩缩器：默认 dry-run（只决策不执行）；生产设 DRY_RUN=false 并挂载 docker.sock
+  autoscaler:
+    image: ${REGISTRY:-ghcr.io/yourorg}/autoscaler:${TAG:-latest}
+    environment:
+      APP_ENV: production
+      SERVICE_NAME: autoscaler
+      LOG_LEVEL: INFO
+      TARGET_SERVICE: service-template
+      TARGET_URLS: http://service-template:8100,http://service-template-2:8100,http://service-template-3:8100
+      INTERVAL_SECONDS: "${AUTOSCALER_INTERVAL:-5}"
+      MIN_REPLICAS: "${AUTOSCALER_MIN:-1}"
+      MAX_REPLICAS: "${AUTOSCALER_MAX:-6}"
+      SCALE_UP_RPS: "${AUTOSCALER_UP_RPS:-20}"
+      SCALE_DOWN_RPS: "${AUTOSCALER_DOWN_RPS:-5}"
+      SUSTAIN_UP: "${AUTOSCALER_SUSTAIN_UP:-3}"
+      SUSTAIN_DOWN: "${AUTOSCALER_SUSTAIN_DOWN:-6}"
+      COOLDOWN_SECONDS: "${AUTOSCALER_COOLDOWN:-60}"
+      DRY_RUN: ${AUTOSCALER_DRY_RUN:-true}
+    depends_on:
+      - service-template
+      - service-template-2
+      - service-template-3
+    networks: [backend]
+    restart: unless-stopped
+
+  nginx:
+    image: nginx:1.27-alpine
+    ports:
+      - "${NGINX_PORT:-80}:80"
+      - "${NGINX_HTTPS_PORT:-443}:443"
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+    depends_on:
+      - gateway
+      - gateway-2
+      - gateway-3
+    networks: [backend]
+    restart: unless-stopped
+
+
+
+  # ===== 资源监控（默认关闭，启用：docker compose --profile monitoring up -d）=====
+  prometheus:
+    image: prom/prometheus:v2.55.1
+    command:
+      - --config.file=/etc/prometheus/prometheus.yml
+      - --storage.tsdb.retention.time=7d
+    volumes:
+      - ./monitoring/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - ./monitoring/alerting-rules.yml:/etc/prometheus/alerting-rules.yml:ro
+      - promdata:/prometheus
+    ports:
+      - "${PROMETHEUS_PORT:-9090}:9090"
+    profiles: ["monitoring"]
+    networks: [backend]
+    restart: unless-stopped
+
+  grafana:
+    image: grafana/grafana:11.1.0
+    environment:
+      GF_SECURITY_ADMIN_USER: ${GRAFANA_ADMIN_USER:-admin}
+      GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_ADMIN_PASSWORD:-admin}
+    volumes:
+      - ./monitoring/grafana/provisioning:/etc/grafana/provisioning:ro
+      - ./monitoring/grafana/dashboards:/var/lib/grafana/dashboards:ro
+      - grafanadata:/var/lib/grafana
+    ports:
+      - "${GRAFANA_PORT:-3000}:3000"
+    depends_on:
+      - prometheus
+    profiles: ["monitoring"]
+    networks: [backend]
+    restart: unless-stopped
+
+  node-exporter:
+    image: prom/node-exporter:v1.8.2
+    volumes:
+      - /proc:/host/proc:ro
+      - /sys:/host/sys:ro
+      - /:/rootfs:ro
+    command:
+      - --path.procfs=/host/proc
+      - --path.sysfs=/host/sys
+      - --path.rootfs=/rootfs
+    profiles: ["monitoring"]
+    networks: [backend]
+    restart: unless-stopped
+
+  # cAdvisor：Docker Desktop(WSL2) 无法访问 cgroup 挂载，仅 Linux 主机可用（--profile cadvisor）
+  cadvisor:
+    image: google/cadvisor:latest
+    volumes:
+      - /:/rootfs:ro
+      - /var/run:/var/run:ro
+      - /sys:/sys:ro
+      - /var/lib/docker/:/var/lib/docker:ro
+      - /dev/disk/:/dev/disk:ro
+    privileged: true
+    devices:
+      - /dev/kmsg
+    profiles: ["monitoring"]
+    networks: [backend]
+    restart: unless-stopped
+volumes:
+  pgdata:
+  pgreplica:
+  redisdata:
+  mqdata:
+  promdata:
+  grafanadata:
+
+networks:
+  backend:
+    driver: bridge

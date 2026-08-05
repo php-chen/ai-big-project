@@ -1,0 +1,61 @@
+name: CI
+
+on:
+  push:
+    branches: [main, master]
+  pull_request:
+
+jobs:
+  lint-and-test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.14"
+          cache: pip
+
+      - name: Install project packages
+        run: |
+          pip install --no-cache-dir -e packages/contract-sdk
+          pip install --no-cache-dir --no-deps -e packages/kernel
+          pip install --no-cache-dir --no-deps -e services/service-template
+          pip install --no-cache-dir --no-deps -e services/gateway
+          pip install --no-cache-dir pytest pytest-asyncio pytest-cov ruff jsonschema aiosqlite alembic "uvicorn[standard]"
+
+      - name: Lint (ruff)
+        run: ruff check packages services
+
+      - name: Unit + boundary + contract tests
+        run: |
+          pytest -m "not integration and not e2e" -q \
+            tests \
+            packages/kernel/tests packages/contract-sdk/tests \
+            services/service-template/tests services/gateway/tests
+
+      - name: E2E tests (gateway -> service)
+        run: pytest -m e2e -q tests/e2e
+
+  integration:
+    runs-on: ubuntu-latest
+    needs: lint-and-test
+    if: github.event_name == 'push'
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.14"
+          cache: pip
+
+      - name: Install project packages
+        run: |
+          pip install --no-cache-dir -e packages/contract-sdk
+          pip install --no-cache-dir --no-deps -e packages/kernel
+          pip install --no-cache-dir --no-deps -e services/service-template
+          pip install --no-cache-dir --no-deps -e services/gateway
+          pip install --no-cache-dir pytest pytest-asyncio pytest-cov ruff jsonschema aiosqlite alembic testcontainers[postgres,redis,rabbitmq] "uvicorn[standard]"
+
+      - name: Integration tests (real middleware, Docker)
+        run: pytest -m integration -q tests/integration

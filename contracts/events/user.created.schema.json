@@ -1,0 +1,16 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://contracts.ai-big-project.dev/events/user.created.v1.schema.json",
+  "title": "UserCreatedEventPayload",
+  "description": "用户创建成功事件（由用户服务在本地事务提交后通过 Outbox 发布）",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["user_id", "email", "display_name", "created_at"],
+  "properties": {
+    "user_id": { "type": "string", "format": "uuid" },
+    "email": { "type": "string", "format": "email" },
+    "display_name": { "type": "string", "maxLength": 64 },
+    "vip_level": { "type": "integer", "default": 0 },
+    "created_at": { "type": "string", "format": "date-time" }
+  }
+}

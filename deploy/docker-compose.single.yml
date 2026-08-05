@@ -1,0 +1,96 @@
+# 精简单节点编排（适配小内存服务器：2 核 / 2GB）
+# 与完整版差异：单主库（无从库）、服务/网关各 1 副本、跳过 RabbitMQ/Nginx/autoscaler/监控
+# 用法：REGISTRY=ai-big TAG=dev docker compose -f docker-compose.single.yml up -d
+name: ai-big-single
+
+x-template-env: &template-env
+  APP_ENV: production
+  SERVICE_NAME: service-template
+  LOG_LEVEL: INFO
+  DATABASE_URL: postgresql+psycopg://app:app@postgres:5432/app
+  REDIS_URL: redis://redis:6379/0
+  TRUST_PROXY_HEADERS: "true"
+  REGISTRY_URL: ""
+  INSTANCE_URL: http://service-template:8100
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: app
+      POSTGRES_PASSWORD: app
+      POSTGRES_DB: app
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U app -d app"]
+      interval: 5s
+      timeout: 3s
+      retries: 12
+    restart: unless-stopped
+
+  redis:
+    image: redis:7-alpine
+    command: ["redis-server", "--appendonly", "yes"]
+    volumes:
+      - redisdata:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 12
+    restart: unless-stopped
+
+  migrate:
+    image: ${REGISTRY:-ai-big}/service-template:${TAG:-dev}
+    environment: *template-env
+    command: ["alembic", "upgrade", "head"]
+    depends_on:
+      postgres:
+        condition: service_healthy
+    restart: "no"
+
+  service-template:
+    image: ${REGISTRY:-ai-big}/service-template:${TAG:-dev}
+    environment: *template-env
+    ports:
+      - "8100:8100"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      migrate:
+        condition: service_completed_successfully
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request;urllib.request.urlopen('http://127.0.0.1:8100/health/ready',timeout=3)"]
+      interval: 15s
+      timeout: 5s
+      start_period: 20s
+      retries: 5
+    restart: unless-stopped
+
+  gateway:
+    image: ${REGISTRY:-ai-big}/gateway:${TAG:-dev}
+    environment:
+      APP_ENV: production
+      SERVICE_NAME: gateway
+      LOG_LEVEL: INFO
+      UPSTREAM_SERVICE_URL: http://service-template:8100
+      DEV_TOKEN: ${DEV_TOKEN:-dev-token}
+    ports:
+      - "8000:8000"
+    depends_on:
+      service-template:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request;urllib.request.urlopen('http://127.0.0.1:8000/health/live',timeout=3)"]
+      interval: 15s
+      timeout: 5s
+      start_period: 20s
+      retries: 5
+    restart: unless-stopped
+
+volumes:
+  pgdata:
+  redisdata:

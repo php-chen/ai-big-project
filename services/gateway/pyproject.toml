@@ -1,0 +1,26 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "service-gateway"
+version = "0.1.0"
+description = "API 网关：功能级白名单 + 身份注入 + trace 透传 + 反向代理"
+requires-python = ">=3.12"
+dependencies = [
+  "ai-kernel>=0.1.0",
+  "ai-contract-sdk>=0.1.0",
+]
+
+[project.optional-dependencies]
+dev = ["pytest>=8", "pytest-asyncio>=0.24", "ruff>=0.6"]
+
+[tool.setuptools.packages.find]
+include = ["gateway_app*"]
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+testpaths = ["tests"]
+
+[tool.ruff]
+line-length = 100
