@@ -152,3 +152,19 @@ erDiagram
 - 新增/修改服务、包、契约、事件、表归属 → **同步更新 `project-map.yaml`**；
 - CI 的 `tests/boundaries/test_project_map.py` 自动校验地图与仓库一致；
 - 地图与代码不一致 = 构建失败，不允许合并。
+
+## 开发工具：CodeGraph（代码级导航）
+
+- **定位**：项目地图管"模块与架构"，CodeGraph 管"符号与调用链"——两者互补；
+- **索引**：`.codegraph/`（本地生成，不入库）。首次/拉取代码后：
+  ```powershell
+  scripts\codegraph.ps1 -Init    # 首次
+  scripts\codegraph.ps1 -Sync    # 增量同步
+  ```
+- **用法**（AI 与会话内工具同源）：
+  ```powershell
+  scripts\codegraph.ps1 -Explore "UserService.create_user"   # 相关源码 + 波及范围
+  scripts\codegraph.ps1 -Node "create_user"                   # 单符号 + 调用/被调用
+  ```
+- **MCP**：已注册到 Codex（`codegraph serve --mcp`），重启 agent 后自动获得 `codegraph_explore` / `codegraph_node` 工具；
+- **CI**：`codegraph` 作业验证索引可在仓库上正常构建（防工具与代码失配）。

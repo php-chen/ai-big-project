@@ -29,6 +29,7 @@ Copy-Item .env.example .env
 | `scripts\coverage.ps1` | 覆盖率报告（可选 `-FailUnder 60` 门槛） |
 | scripts\docker-build.ps1 | 本地构建生产镜像（-Tag/-Registry） |
 | scripts\lint.ps1 | ruff 静态检查 |
+| scripts\codegraph.ps1 | CodeGraph 代码索引（-Init/-Sync/-Explore/-Node） |
 
 ## 分层架构（洋葱模型）
 

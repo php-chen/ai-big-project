@@ -23,7 +23,13 @@ project:
     cache: Redis 7
     mq: RabbitMQ 3（当前服务端代码使用 LocalEventBus）
     observability: OpenTelemetry + Prometheus + Grafana
-    deployment: Docker Compose + GitHub Actions CD
+    dev_tools:
+  codegraph:
+    path: .codegraph          # 代码级导航索引（本地生成，不入库）
+    cli: codegraph            # npm 全局安装
+    mcp: codegraph serve --mcp # 已注册到 Codex（重启生效）
+
+deployment: Docker Compose + GitHub Actions CD
 
 packages:
   contract-sdk:
@@ -103,6 +109,12 @@ events:
     schema: contracts/events/user.created.schema.json
     publisher: service-template
     consumers: []
+
+dev_tools:
+  codegraph:
+    path: .codegraph          # 代码级导航索引（本地生成，不入库）
+    cli: codegraph            # npm 全局安装
+    mcp: codegraph serve --mcp # 已注册到 Codex（重启生效）
 
 deployment:
   compose:

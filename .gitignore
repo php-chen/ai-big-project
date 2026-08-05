@@ -41,3 +41,6 @@ deploy/.env.prod
 
 # mkdocs 构建产物
 site/
+
+# CodeGraph 本地索引（codegraph init 生成）
+.codegraph/
