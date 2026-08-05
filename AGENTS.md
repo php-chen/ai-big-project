@@ -76,6 +76,7 @@
 ## 3. 仓库结构
 
 ```
+project-map.yaml            # 项目地图（机器可读单一事实来源，CI 校验防漂移）
 contracts/                  # 契约层（唯一事实来源）
   http/*.openapi.yaml       #   HTTP 契约
   events/*.schema.json      #   事件契约
@@ -111,6 +112,7 @@ scripts/                    # 统一命令
 - [ ] 是否透传了 trace 上下文？日志是否带 request_id/trace_id？
 - [ ] 新增字段是否带了默认值？pydantic 是否 `extra="ignore"`？
 - [ ] 是否硬编码了环境变量/连接信息？
+- [ ] 新增/修改服务、包、契约、事件、表归属后，是否同步更新了 `project-map.yaml`？（CI 校验）
 
 ## 6. 自动化测试纪律（边界由机器守）
 

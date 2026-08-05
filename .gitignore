@@ -38,3 +38,6 @@ smoke-logs/
 # 部署
 deploy/.env.prod
 .env.prod
+
+# mkdocs 构建产物
+site/

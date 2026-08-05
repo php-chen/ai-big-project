@@ -2,7 +2,7 @@
 
 基于 **Python 3.14 + FastAPI** 的微服务 monorepo，以“契约优先 + 数据主权 + 双层鉴权 + 最终一致性 + 可观测性”五大物理定律为地基（详见 [AGENTS.md](AGENTS.md) 与 `docs/architecture/`）。
 
-## 快速开始
+## 项目地图`n`n> 给开发者 / 产品 / AI / 测试的全局导航：**机器可读** `project-map.yaml`（CI 校验防漂移）+ **人读全景** [docs/index.md](docs/index.md)（Mermaid 架构/链路/事件/数据 ER）+ 可搜索文档站（`scripts\docs.ps1`）。`n`n- **5 分钟看懂项目**：见 [docs/index.md](docs/index.md)`n- **新增/修改模块必须同步更新** `project-map.yaml`（CI 校验，不一致 = 失败）`n`n---`n`n## 快速开始
 
 ```powershell
 # 1. 创建虚拟环境（Python 3.14）

@@ -1,0 +1,118 @@
+# ============================================================
+# 项目地图（机器可读 · 单一事实来源）
+# 给开发者 / 产品 / AI / 测试的全局导航。
+# 维护规则：新增/修改模块时**必须**同步更新本文件；
+#          CI 校验 tests/boundaries/test_project_map.py（不一致 = 失败）。
+# ============================================================
+version: "1.0"
+
+project:
+  name: AI大项目
+  description: 基于 Python 3.14 + FastAPI 的微服务 monorepo
+  principles:
+    - 契约优先（Contract-First）
+    - 数据主权单向流（Data Ownership）
+    - 网关管功能 / 业务管数据（双层鉴权 + 信任边界）
+    - 最终一致性 + Outbox
+    - 可观测性基因（OTel / 结构化日志 / 指标）
+  tech_stack:
+    language: Python 3.14
+    framework: FastAPI
+    orm: SQLAlchemy 2.0 async
+    database: PostgreSQL 16（主从 · 读写分离）
+    cache: Redis 7
+    mq: RabbitMQ 3（当前服务端代码使用 LocalEventBus）
+    observability: OpenTelemetry + Prometheus + Grafana
+    deployment: Docker Compose + GitHub Actions CD
+
+packages:
+  contract-sdk:
+    path: packages/contract-sdk
+    package: contract_sdk
+    description: 契约 SDK（由 contracts/ 生成）：事件信封 EventEnvelope + 各域 schema
+    depends_on: []
+  kernel:
+    path: packages/kernel
+    package: kernel
+    description: 共享内核（零业务属性）：配置/日志/追踪/异常/错误码/鉴权/DB读写分离/Outbox/事件/指标/注册中心/健康检查
+    modules:
+      - config
+      - logging
+      - telemetry
+      - context
+      - errors
+      - error_codes
+      - problem
+      - auth
+      - db
+      - outbox
+      - events
+      - registry
+      - metrics
+      - health
+      - middleware
+      - idempotency
+    depends_on: [contract-sdk]
+
+services:
+  gateway:
+    path: services/gateway
+    package: gateway_app
+    port: 8000
+    replicas: 3
+    description: API 网关：功能白名单（默认拒绝）+ 身份注入 + trace 透传 + 客户端侧负载均衡 + 动态服务发现
+    envs: [UPSTREAM_SERVICE_URLS, UPSTREAM_SERVICE_URL, DEV_TOKEN, REGISTRY_URL, DISCOVERY_SERVICE]
+    depends_on: [service-template]
+    owns_tables: []
+    publishes: []
+    subscribes: []
+  service-template:
+    path: services/service-template
+    package: app
+    port: 8100
+    replicas: 3
+    description: 用户服务（原型）：用户 CRUD + Outbox 发布 user.created.v1 + 业务错误码
+    envs: [DATABASE_URL, REPLICA_DATABASE_URL, REPLICA_DATABASE_URLS, REDIS_URL, TRUST_PROXY_HEADERS, REGISTRY_URL, INSTANCE_URL]
+    depends_on: [postgres, redis]
+    owns_tables: [users, outbox_messages]
+    publishes: [user.created.v1]
+    subscribes: []
+
+middleware:
+  postgres:
+    type: database
+    role: 主库（写）/ 从库（读，轮询）
+    port: 5432
+  redis:
+    type: cache
+    role: 幂等存储 / 服务注册中心 / 缓存
+    port: 6379
+  rabbitmq:
+    type: mq
+    role: 领域事件（Outbox 投递目标；服务端当前用 LocalEventBus）
+    port: 5672
+
+contracts:
+  http:
+    - contracts/http/template.openapi.yaml
+  events:
+    - contracts/events/user.created.schema.json
+
+events:
+  - name: user.created.v1
+    schema: contracts/events/user.created.schema.json
+    publisher: service-template
+    consumers: []
+
+deployment:
+  compose:
+    dev: docker-compose.yml
+    prod: deploy/docker-compose.prod.yml
+    single: deploy/docker-compose.single.yml
+  cd:
+    workflow: .github/workflows/deploy.yml
+    registry: ghcr.io
+    server: 101.47.30.103
+  monitoring:
+    prometheus: deploy/monitoring/prometheus.yml
+    grafana_dashboard: deploy/monitoring/grafana/dashboards/resource-overview.json

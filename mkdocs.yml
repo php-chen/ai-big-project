@@ -1,0 +1,47 @@
+site_name: AI 大项目
+site_description: 微服务 monorepo 项目地图与文档（契约优先/数据主权/双层鉴权/最终一致性/可观测性）
+repo_url: https://github.com/php-chen/ai-big-project
+docs_dir: docs
+
+theme:
+  name: material
+  language: zh
+  features:
+    - navigation.sections
+    - navigation.expand
+    - navigation.top
+    - search.suggest
+    - content.code.copy
+
+markdown_extensions:
+  - tables
+  - admonition
+  - pymdownx.superfences:
+      custom_fences:
+        - name: mermaid
+          class: mermaid
+          format: !!python/name:pymdownx.superfences.fence_code_format
+  - pymdownx.tabbed
+  - pymdownx.details
+
+nav:
+  - 项目地图: index.md
+  - 架构:
+      - 五大物理定律: architecture/01-physical-laws.md
+      - 数据归属矩阵: architecture/02-ownership-matrix.md
+      - 洋葱边界: architecture/03-onion-boundary.md
+  - 标准规范:
+      - 状态编码: standards/status-codes.md
+      - 日志规范: standards/logging.md
+      - 数据库设计: standards/database.md
+      - 负载均衡: standards/load-balancing.md
+      - 动态扩容: standards/dynamic-scaling.md
+      - 资源监控: standards/resource-monitoring.md
+      - 自动化测试: standards/testing.md
+      - 响应与错误: standards/response-and-errors.md
+      - 环境变量命名: standards/env-var-naming.md
+      - 数据演进: standards/expand-contract.md
+  - 模块说明书:
+      - 模板: module-specs/template.md
+      - 说明: module-specs/README.md
+  - AI 协作: ai-collaboration.md

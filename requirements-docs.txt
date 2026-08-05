@@ -1,0 +1,2 @@
+# 文档站依赖（mkdocs-material 会自动拉取 mkdocs）
+mkdocs-material>=9.5
